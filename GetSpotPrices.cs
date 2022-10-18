@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NodaTime;
 using NodaTime.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
@@ -50,7 +51,7 @@ namespace SpotPrices
 
     static IEnumerable<PricePoint> ConvertToSekPerKwh(IEnumerable<PricePoint> pricePoints, double exchangeRate)
     {
-      return pricePoints.Select(pricePoint => new PricePoint { Amount = pricePoint.Amount * exchangeRate });
+      return pricePoints.Select(pricePoint => new PricePoint { Amount = Math.Round(pricePoint.Amount * exchangeRate) });
     }
 
     static async Task<double> GetExchangeRate(LocalDate localDate)
