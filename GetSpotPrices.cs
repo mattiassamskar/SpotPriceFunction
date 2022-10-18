@@ -59,7 +59,7 @@ namespace SpotPrices
 
       var url = $"https://api.apilayer.com/exchangerates_data/v1/{date}?base=EUR&symbols=SEK";
       var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-      httpRequestMessage.Headers.Add("apikey", System.Environment.GetEnvironmentVariable("ApiKey"));
+      httpRequestMessage.Headers.Add("apikey", System.Environment.GetEnvironmentVariable("ApiLayer_ApiKey"));
 
       var response = await new HttpClient().SendAsync(httpRequestMessage);
 
@@ -76,7 +76,7 @@ namespace SpotPrices
 
     static async Task<IEnumerable<PricePoint>> GetPricePoints(LocalDate localDate)
     {
-      var securityToken = System.Environment.GetEnvironmentVariable("SecurityToken");
+      var securityToken = System.Environment.GetEnvironmentVariable("Entsoe_SecurityToken");
       var period = localDate.PlusDays(-1).ToString("yyyyMMdd2300", CultureInfo.InvariantCulture);
       var url = $"https://web-api.tp.entsoe.eu/api?documentType=A44&in_Domain=10Y1001A1001A46L&out_Domain=10Y1001A1001A46L&periodStart={period}&periodEnd={period}&securityToken={securityToken}";
 
