@@ -32,15 +32,17 @@ namespace SpotPrices
 
       var exchangeRate = await GetExchangeRate(today);
       var todayPricePoints = await GetPricePoints(today);
-      var tomorrowPricePoints = await GetPricePoints(today);
+      var tomorrowPricePoints = await GetPricePoints(tomorrow);
       var todayPrices = ConvertToSekPerKwh(todayPricePoints, exchangeRate);
       var tomorrowPrices = ConvertToSekPerKwh(tomorrowPricePoints, exchangeRate);
 
       var json = JsonConvert.SerializeObject(new
       {
-        exchangeRate,
-        todayPrices,
-        tomorrowPrices
+        rate = exchangeRate,
+        today,
+        tomorrow,
+        todayPrices = todayPrices.Select(price => price.Amount),
+        tomorrowPrices = tomorrowPrices.Select(price => price.Amount)
       });
 
       return new HttpResponseMessage(HttpStatusCode.OK)
@@ -51,7 +53,7 @@ namespace SpotPrices
 
     static IEnumerable<PricePoint> ConvertToSekPerKwh(IEnumerable<PricePoint> pricePoints, double exchangeRate)
     {
-      return pricePoints.Select(pricePoint => new PricePoint { Amount = Math.Round(pricePoint.Amount * exchangeRate) });
+      return pricePoints.Select(pricePoint => new PricePoint { Amount = Math.Round(pricePoint.Amount * exchangeRate) / 10 });
     }
 
     static async Task<double> GetExchangeRate(LocalDate localDate)
