@@ -15,6 +15,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace SpotPrices
 {
@@ -22,12 +23,10 @@ namespace SpotPrices
   {
     [FunctionName("GetSpotPrices")]
     public static async Task<HttpResponseMessage> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-        [Blob("spotpricecache.json", FileAccess.ReadWrite)] Stream stream,
-        ILogger log)
+        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log)
     {
-      log.LogInformation("GetPrices function triggered.");
-      Cache.Hydrate(stream);
+      log.LogInformation("GetPrices function triggered. Hydrating cache");
+      await Cache.Hydrate();
       var clock = SystemClock.Instance.InZone(DateTimeZoneProviders.Tzdb["Europe/Stockholm"]);
       log.LogInformation("Clock is " + clock.GetCurrentLocalDateTime());
       var today = clock.GetCurrentDate();
@@ -44,7 +43,7 @@ namespace SpotPrices
       Cache.StoreTomorrowPrices(tomorrowPricePoints);
       var todayPrices = ConvertToSekPerKwh(todayPricePoints, exchangeRate);
       var tomorrowPrices = ConvertToSekPerKwh(tomorrowPricePoints, exchangeRate);
-      Cache.PersistCache();
+      await Cache.PersistCache();
 
       var json = JsonConvert.SerializeObject(new
       {

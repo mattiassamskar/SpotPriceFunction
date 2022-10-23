@@ -1,20 +1,34 @@
+using Azure.Storage.Blobs;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using NodaTime;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace SpotPrices
 {
   public static class Cache
   {
-    private static Stream _stream;
+    private static BlobClient _blobClient;
     public static PriceInfo PriceInfo { get; set; }
 
-    public static void Hydrate(Stream stream)
+    public static async Task Hydrate()
     {
-      _stream = stream;
-      PriceInfo = ReadCache();
+      try
+      {
+        var blobContainerClient = new BlobContainerClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "cache");
+        _blobClient = blobContainerClient.GetBlobClient("spotpricecache.json");
+        var priceInfo = await ReadCache();
+        PriceInfo = priceInfo != null ? priceInfo : new PriceInfo();
+      }
+      finally
+      {
+        if (PriceInfo == null) PriceInfo = new PriceInfo();
+      }
     }
 
     public static void StoreTodayPrices(IEnumerable<PricePoint> pricePoints)
@@ -42,33 +56,24 @@ namespace SpotPrices
       PriceInfo.Tomorrow = localDate;
     }
 
-    public static void PersistCache()
+    public static async Task PersistCache()
     {
-      TextWriter writer = null;
-      try
-      {
-        writer = new StreamWriter(_stream);
-        writer.Write(JsonConvert.SerializeObject(PriceInfo));
-      }
-      finally
-      {
-        if (writer != null)
-          writer.Close();
-      }
+      var stream = await _blobClient.OpenWriteAsync(true);
+      stream.Write(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(PriceInfo)));
+      stream.Close();
     }
 
-    private static PriceInfo ReadCache()
+    private async static Task<PriceInfo> ReadCache()
     {
-      TextReader reader = null;
       try
       {
-        reader = new StreamReader(_stream);
+        if (!_blobClient.Exists()) return new PriceInfo();
+        var stream = await _blobClient.OpenReadAsync();
+        var reader = new StreamReader(stream);
         return JsonConvert.DeserializeObject<PriceInfo>(reader.ReadToEnd());
       }
       finally
       {
-        if (reader != null)
-          reader.Close();
       }
     }
   }
