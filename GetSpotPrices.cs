@@ -8,6 +8,7 @@ using NodaTime;
 using NodaTime.Extensions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Net;
@@ -22,20 +23,28 @@ namespace SpotPrices
     [FunctionName("GetSpotPrices")]
     public static async Task<HttpResponseMessage> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
+        [Blob("spotpricecache.json", FileAccess.ReadWrite)] Stream stream,
         ILogger log)
     {
       log.LogInformation("GetPrices function triggered.");
+      Cache.Hydrate(stream);
       var clock = SystemClock.Instance.InZone(DateTimeZoneProviders.Tzdb["Europe/Stockholm"]);
       log.LogInformation("Clock is " + clock.GetCurrentLocalDateTime());
       var today = clock.GetCurrentDate();
+      Cache.StoreToday(today);
       var tomorrow = today.PlusDays(1);
+      Cache.StoreTommorow(tomorrow);
       log.LogInformation("Today is " + today + " and tomorrow is " + tomorrow);
 
       var exchangeRate = await GetExchangeRate(today, log);
+      Cache.StoreRate(exchangeRate);
       var todayPricePoints = await GetPricePoints(today, log);
+      Cache.StoreTodayPrices(todayPricePoints);
       var tomorrowPricePoints = await GetPricePoints(tomorrow, log);
+      Cache.StoreTomorrowPrices(tomorrowPricePoints);
       var todayPrices = ConvertToSekPerKwh(todayPricePoints, exchangeRate);
       var tomorrowPrices = ConvertToSekPerKwh(tomorrowPricePoints, exchangeRate);
+      Cache.PersistCache();
 
       var json = JsonConvert.SerializeObject(new
       {
