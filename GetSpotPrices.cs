@@ -8,14 +8,12 @@ using NodaTime;
 using NodaTime.Extensions;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace SpotPrices
 {
@@ -26,10 +24,10 @@ namespace SpotPrices
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log)
     {
       log.LogInformation("GetPrices function triggered. Hydrating cache");
-      await Cache.Hydrate();
       var clock = SystemClock.Instance.InZone(DateTimeZoneProviders.Tzdb["Europe/Stockholm"]);
       log.LogInformation("Clock is " + clock.GetCurrentLocalDateTime());
       var today = clock.GetCurrentDate();
+      await Cache.Hydrate(today);
       Cache.StoreToday(today);
       var tomorrow = today.PlusDays(1);
       Cache.StoreTommorow(tomorrow);
@@ -67,11 +65,14 @@ namespace SpotPrices
 
     static async Task<double> GetExchangeRate(LocalDate localDate, ILogger log)
     {
+      if (Cache.PriceInfo.Rate != 0)
+      {
+        return Cache.PriceInfo.Rate;
+      }
       var defaultExchangeRate = System.Environment.GetEnvironmentVariable("DefaultExchangeRate");
       try
       {
         var date = localDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
         var url = $"https://api.apilayer.com/exchangerates_data/v1/{date}?base=EUR&symbols=SEK";
         var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         httpRequestMessage.Headers.Add("apikey", System.Environment.GetEnvironmentVariable("ApiLayer_ApiKey"));
@@ -97,6 +98,15 @@ namespace SpotPrices
 
     static async Task<IEnumerable<PricePoint>> GetPricePoints(LocalDate localDate, ILogger log)
     {
+      if (Cache.PriceInfo.Today == localDate && Cache.PriceInfo.TodayPrices.Count > 0)
+      {
+        return Cache.PriceInfo.TodayPrices;
+      }
+      if (Cache.PriceInfo.Tomorrow == localDate && Cache.PriceInfo.TomorrowPrices.Count > 0)
+      {
+        return Cache.PriceInfo.TomorrowPrices;
+      }
+
       try
       {
         var securityToken = System.Environment.GetEnvironmentVariable("Entsoe_SecurityToken");

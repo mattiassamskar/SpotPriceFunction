@@ -1,5 +1,4 @@
 using Azure.Storage.Blobs;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using NodaTime;
 using System;
@@ -16,19 +15,12 @@ namespace SpotPrices
     private static BlobClient _blobClient;
     public static PriceInfo PriceInfo { get; set; }
 
-    public static async Task Hydrate()
+    public static async Task Hydrate(LocalDate today)
     {
-      try
-      {
-        var blobContainerClient = new BlobContainerClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "cache");
-        _blobClient = blobContainerClient.GetBlobClient("spotpricecache.json");
-        var priceInfo = await ReadCache();
-        PriceInfo = priceInfo != null ? priceInfo : new PriceInfo();
-      }
-      finally
-      {
-        if (PriceInfo == null) PriceInfo = new PriceInfo();
-      }
+      var blobContainerClient = new BlobContainerClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "cache");
+      _blobClient = blobContainerClient.GetBlobClient("spotpricecache.json");
+      var cachedPriceInfo = await ReadCache();
+      PriceInfo = cachedPriceInfo.Today == today ? cachedPriceInfo : new PriceInfo { TodayPrices = new List<PricePoint>(), TomorrowPrices = new List<PricePoint>() };
     }
 
     public static void StoreTodayPrices(IEnumerable<PricePoint> pricePoints)
@@ -65,16 +57,13 @@ namespace SpotPrices
 
     private async static Task<PriceInfo> ReadCache()
     {
-      try
+      if (!_blobClient.Exists())
       {
-        if (!_blobClient.Exists()) return new PriceInfo();
-        var stream = await _blobClient.OpenReadAsync();
-        var reader = new StreamReader(stream);
-        return JsonConvert.DeserializeObject<PriceInfo>(reader.ReadToEnd());
+        return new PriceInfo { TodayPrices = new List<PricePoint>(), TomorrowPrices = new List<PricePoint>() };
       }
-      finally
-      {
-      }
+      var stream = await _blobClient.OpenReadAsync();
+      var reader = new StreamReader(stream);
+      return JsonConvert.DeserializeObject<PriceInfo>(reader.ReadToEnd());
     }
   }
 }
