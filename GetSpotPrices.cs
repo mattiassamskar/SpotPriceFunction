@@ -21,7 +21,7 @@ namespace SpotPrices
   {
     [FunctionName("GetSpotPrices")]
     public static async Task<HttpResponseMessage> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
     {
       log.LogInformation("GetPrices function triggered. Hydrating cache");
       var clock = SystemClock.Instance.InZone(DateTimeZoneProviders.Tzdb["Europe/Stockholm"]);
