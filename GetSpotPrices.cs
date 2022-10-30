@@ -98,6 +98,8 @@ namespace SpotPrices
 
     static async Task<IEnumerable<PricePoint>> GetPricePoints(LocalDate localDate, ILogger log)
     {
+      var emptyList = Enumerable.Range(0, 24).Select(i => new PricePoint { Amount = 0 });
+
       if (Cache.PriceInfo.Today == localDate && Cache.PriceInfo.TodayPrices.Count > 0)
       {
         return Cache.PriceInfo.TodayPrices;
@@ -118,7 +120,7 @@ namespace SpotPrices
         if (!response.IsSuccessStatusCode)
         {
           log.LogError("Could not fetch price points");
-          return new List<PricePoint>();
+          return emptyList;
         }
         var result = await response.Content.ReadAsStringAsync();
 
@@ -132,7 +134,7 @@ namespace SpotPrices
       catch
       {
         log.LogError("Error while parsing price points");
-        return new List<PricePoint>();
+        return emptyList;
       }
     }
   }
