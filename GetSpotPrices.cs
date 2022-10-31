@@ -112,8 +112,9 @@ namespace SpotPrices
       try
       {
         var securityToken = System.Environment.GetEnvironmentVariable("Entsoe_SecurityToken");
-        var period = localDate.PlusDays(-1).ToString("yyyyMMdd2300", CultureInfo.InvariantCulture);
-        var url = $"https://web-api.tp.entsoe.eu/api?documentType=A44&in_Domain=10Y1001A1001A46L&out_Domain=10Y1001A1001A46L&periodStart={period}&periodEnd={period}&securityToken={securityToken}";
+        var periodStart = localDate.ToString("yyyyMMdd0000", CultureInfo.InvariantCulture);
+        var periodEnd = localDate.ToString("yyyyMMdd2300", CultureInfo.InvariantCulture);
+        var url = $"https://web-api.tp.entsoe.eu/api?documentType=A44&in_Domain=10Y1001A1001A46L&out_Domain=10Y1001A1001A46L&periodStart={periodStart}&periodEnd={periodEnd}&securityToken={securityToken}";
 
         HttpResponseMessage response = await new HttpClient().GetAsync(url);
 
