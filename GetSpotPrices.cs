@@ -100,11 +100,11 @@ namespace SpotPrices
     {
       var emptyList = Enumerable.Range(0, 24).Select(i => new PricePoint { Amount = 0 });
 
-      if (Cache.PriceInfo.Today == localDate && Cache.PriceInfo.TodayPrices.Count > 0)
+      if (Cache.PriceInfo.Today == localDate && Cache.PriceInfo.TodayPrices.Any(pricePoint => pricePoint.Amount > 0))
       {
         return Cache.PriceInfo.TodayPrices;
       }
-      if (Cache.PriceInfo.Tomorrow == localDate && Cache.PriceInfo.TomorrowPrices.Count > 0)
+      if (Cache.PriceInfo.Tomorrow == localDate && Cache.PriceInfo.TomorrowPrices.Any(pricePoint => pricePoint.Amount > 0))
       {
         return Cache.PriceInfo.TomorrowPrices;
       }
